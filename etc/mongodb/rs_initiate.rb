@@ -1,7 +1,7 @@
 #!/usr/ruby
 #################################
 # 
-# Register_rs is a script allowing you to connect newly created
+# Script allowing you to connect newly created
 # replica-set node to existing replica-set.
 # 
 # This script depends on following gems:
@@ -12,6 +12,7 @@
 #
 #################################
 
+APP_NAME	= 'rs_initiate'
 ERR_START	= 1
 ERR_PARAMS	= 2
 
@@ -39,14 +40,14 @@ end
 include Mongo
 
 def show_usage
-  STDOUT.puts "register_rs.rb  (c) 2010 Vanilladesk Ltd."
-  STDOUT.puts "Usage: register_rs <replica-set-members>"
+  STDOUT.puts "#{APP_NAME} (c) 2010 Vanilladesk Ltd."
+  STDOUT.puts "Usage: #{APP_NAME} <replica-set-members>"
   STDOUT.puts ""
   STDOUT.puts "<replica-set-members> is a comma delimited list of replica-set nodes."
   STDOUT.puts "Nodes can be represented using domain name or ip address."
   STDOUT.puts "There should be no spaces in the list."
   STDOUT.puts ""
-  STDOUT.puts "Example: register_rs db1.company.com,db2.company.com"
+  STDOUT.puts "Example: #{APP_NAME} db1.company.com,db2.company.com"
   STDOUT.puts ""
 end
 
@@ -67,12 +68,15 @@ else
   rs_members=ARGV[0].split(',')  
 end
 
-mongod --replSet setname/host1,host2
-db.runCommand({replSetInitiate: cfg})
+# -------------------------
+# create replica set configuration
+rs_config = {}
+
+rs_config = { :_id => 
 
 # connect to the local server 'admin' database - this one is always available
-dbcon = Connection.new.db('admin')
-dbcon.command("rs.initiate()
+db = Connection.new.db('admin')
+db.command("command"=>{:replSetInitiate => rs_config})
 
 # add all received replica-set nodes to replica-set configuration
 # http://www.mongodb.org/display/DOCS/Adding+a+New+Set+Member
