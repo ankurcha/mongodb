@@ -1,0 +1,23 @@
+/var/log/mongodb/*.log {
+    # copy existing log file and truncate it
+    copytruncate
+	
+	# perform daily log rotation
+	daily
+	
+	# no issue if log file is not available
+	missingok
+	
+	# keep 20 rotations in the system
+	rotate 20
+	
+	# compress using gzip
+	compress
+	
+	# compress only day after rotation has been made
+	delaycompress
+
+	# make rotated log file rw for root and read-only for adm group
+	create 640 root adm
+
+}
