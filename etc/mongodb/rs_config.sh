@@ -3,6 +3,13 @@
 # 
 # Script allowing you to configure and initialize replica-set.
 #
+# Script will
+# - modify /etc/mongodb/mongod.conf by setting replSet parameter 
+#   ! exiting replSet value will be overwritten !
+# - restart MongoDB daemon in order to re-read modified config file
+# - initialize replica set 
+# - optionally add (if provided) seed servers to replica set configuration
+#
 # Copyright (c) 2010 Vanilladesk Ltd. http://www.vanilladesk.com
 #
 #################################
