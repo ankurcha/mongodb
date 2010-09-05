@@ -5,7 +5,7 @@
 #
 # Script will download and install specified MongoDB version (see configuration part)
 #
-# Copyright (c) 2010 Vanilladesk Ltd., jozef.sovcik@vanilladesk.com
+# Copyright (c) 2010 Vanilladesk Ltd., http://www.vanilladesk.com
 # 
 # Repository: https://github.com/vanilladesk/mongodb
 #
@@ -13,7 +13,7 @@
 
 ##### CONFIGURATION - TO BE MODIFIED IF NECESSARY
 # MongoDB version to be used
-mongo_version="1.6.1"
+mongo_version="1.6.2"
 
 # MongoDB data path
 mongo_dbpath="/var/lib/mongodb"
