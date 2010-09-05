@@ -4,7 +4,7 @@
 # registering newly created replica-set node to existing 
 # replica set.
 #
-# (c) 2010 Vanilladesk Ltd. http://www.vanilladesk.com
+# Copyright (c) 2010 Vanilladesk Ltd. http://www.vanilladesk.com
 #----------------------------------------
 
 if [ ! "`which ruby`" ]; then
@@ -12,4 +12,4 @@ if [ ! "`which ruby`" ]; then
   exit 1
 fi
 
-ruby /etc/mongodb/register_rs.rb $@
+ruby /etc/mongodb/rs_register.rb $@
