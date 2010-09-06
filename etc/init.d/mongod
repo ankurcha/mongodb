@@ -11,13 +11,43 @@
 ### END INIT INFO
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+# full name of daemon
 DAEMON=/usr/local/bin/mongod
+
+# daemon command line options
 DAEMON_OPTS="-f /etc/mongodb/mongod.conf"
+
+# daemon name. Used also for pid file creation.
 NAME="mongod"
+
+# daemon description
 DESC="MongoDB database server"
+
+# user account used to run mongod daemon
 USER="mongodb"
 
-test -x $DAEMON || exit 0
+# replica set name (modify in case you would like to run mongod 
+# configured as replica set node - see http://www.mongodb.org/display/DOCS/Replica+Sets)
+RS_NAME=""
+
+# In case mongod is configured as replica-set node, then RS_SEED
+# can contain comma separated seed nodes or e.g. command to get
+# the list of seed nodes, e.g. RS_SEED="host1:port1,host2:port2,host3"
+# or something like RS_SEED="`get_seed_nodes`" (see Reg2Rep project
+# at http://github.com/vanilladesk/reg2rep for example of using
+# remote registry for keeping list of seed nodes in a dynamic environment)
+RS_SEED=""
+
+#------------------------------------------------
+
+# if RS_SEED is defined and RS_NAME too, then append RS_SEED to RS_NAME
+[ "$RS_SEED" ] && [ "$RS_NAME" ] && RS_NAME="$RS_NAME/$RS_SEED"
+
+# if RS_NAME is defined, then include it in daemon command line options
+[ "$RS_NAME" ] && DAEMON_OPTS="--replSet $RS_NAME $DAEMON_OPTS"
+
+[ -e $DAEMON ] || exit 0
 
 set -e
 
