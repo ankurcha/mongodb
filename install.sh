@@ -50,8 +50,11 @@ mongo_download="$mongo_download$mongo_tar"
 # working forlder for temporary files
 work_fld="/var/tmp/mongo"
 
-# Folder where Mongo will be installed locally
-install_fld="/usr/local/lib"
+# Root folder where Mongo will be installed locally
+install_root_fld="/usr/local/lib"
+
+# MongoDB install folder - based on archive name - assuming it is .tgz, not .tar.gz
+install_fld=$install_root_fld/${mongo_tar%.tgz}
 
 # Bin folder in which mongodb symlinks will be created
 bin_folder="/usr/local/bin"
@@ -139,22 +142,22 @@ if [ $? -ne 0 ]; then
 fi
 
 # extract original source archive to predefined folder
-cecho "Extracting downloaded MongoDB archive to $install_fld." $C_RED
-sudo tar xzf $mongo_tar -C $install_fld
+cecho "Extracting downloaded MongoDB archive to $install_root_fld." $C_GREEN
+sudo tar xzf $mongo_tar -C $install_root_fld
 if [ $? -ne 0 ]; then
-  cecho "Fatal error: can not extract archive $mongo_tar to folder $install_fld." $C_RED
+  cecho "Fatal error: can not extract archive $mongo_tar to folder $install_root_fld." $C_RED
   exit $ERR_PREPARE
 else
   echo "Done."
 fi
 
-if [ ! -d $install_fld/${mongo_tar%.*} ]; then
-  cecho "Fatal error: expected folder does not exist $install_fld/${mongo_tar%.*} ." $C_RED
+if [ ! -d $install_fld ]; then
+  cecho "Fatal error: expected folder does not exist $install_fld ." $C_RED
   exit $ERR_PREPARE
 fi
 
-if [ ! -e "$install_fld/${mongo_tar%.*}/bin/mongod" ]; then
-  cecho "Fatal error: mongod not found in $install_fld/${mongo_tar%.*}." $_CRED
+if [ ! -e "$install_fld/bin/mongod" ]; then
+  cecho "Fatal error: mongod not found in $install_fld/bin.*}." $_CRED
   exit $ERR_PREPARE
 fi
 
@@ -189,12 +192,12 @@ fi
 cecho "Creating symlinks in $bin_folder..." $C_GREEN
 # move existing files/symlinks to .uninstall folder
 [ -d $install_fld/.uninstall/bin ] || sudo mkdir $install_fld/.uninstall/bin
-for f in $install_fld/${mongo_tar%.*}/bin/*; do
-  sudo mv $bin_folder/${f##/*/} $install_fld/.uninstall/bin > /dev/nul
+for f in $install_fld/bin/*; do
+  [ -e $bin_folder/${f##/*/} ] && sudo mv $bin_folder/${f##/*/} $install_fld/.uninstall/bin
 done
 
 # create new symlinks pointing to new folder
-sudo cp -s  $install_fld/${mongo_tar%.*}/bin/* $bin_folder
+sudo cp -s  $install_fld/bin/* $bin_folder
 if [ $? -ne 0 ]; then
   cecho "Fatal Error: Creation of symlinks failed." $C_RED
   exit $ERR_INSTALL
@@ -211,18 +214,23 @@ fi
 # change owner for database folder so mongodb daemons can access it
 sudo chown $username:$username $mongo_dbpath
 
-cecho "Copying additional configuration files necessary for MongoDB." $C_GREEN
-
 # create folder for log files
+cecho "Creating log folder." $C_GREEN
 [ -d "/var/log/mongodb" ] || sudo mkdir /var/log/mongodb
+if [ $? -ne 0 ]; then
+  cecho "Error: Log folder creation failed." $C_RED
+  exit $ERR_INSTALL
+fi
+
+echo "Folder /var/log/mongodb created."
 
 # and change log folder owner so mongodb daemons can access it
 sudo chown $username:$username /var/log/mongodb
 
-echo "Creating init.d script for MongoDB database server..."
+cecho "Creating init.d script for MongoDB database server..." $C_GREEN
 # move existing init.d script to unistall folder
 [ -d $install_fld/.uninstall/initd ] || sudo mkdir $install_fld/.uninstall/initd
-sudo mv $orig_fld/etc/init.d/mongod $install_fld/.uninstall/initd > /dev/nul
+[ -e /etc/init.d/mongod ] && sudo mv /etc/init.d/mongod $install_fld/.uninstall/initd
 
 # create new init.d script
 sudo cp $orig_fld/etc/init.d/mongod /etc/init.d/mongod
@@ -234,16 +242,20 @@ fi
 # make sure init.d script will be executable
 sudo chmod +x /etc/init.d/mongod
 
+echo "File /etc/init.d/mongod created"
+
 # add configuration file
-cecho "Copying base configuration file (keeping existing ones)..." $C_GREEN
+cecho "Copying default configuration files (keeping existing ones)..." $C_GREEN
 [ -d /etc/mongodb ] || sudo mkdir /etc/mongodb
 for f in $orig_fld/etc/mongodb/*; do
-  [ -e /etc/mongodb/${f##/*/} || sudo cp $f /etc/mongodb
+  [ -e /etc/mongodb/${f##/*/} ] || sudo cp $f /etc/mongodb
   if [ $? -ne 0 ]; then
     cecho "Error: Copying of configuration file $f failed." $C_RED
     exit $ERR_INSTALL
   fi
 done
+
+echo "Copied."
 
 # configure log-rotate
 cecho "Configuring logrotate..." $C_GREEN
@@ -252,6 +264,8 @@ if [ $? -ne 0 ]; then
   cecho "Error: Copying of logrotate configuration files failed." $C_RED
   exit $ERR_INSTALL
 fi
+
+echo "Logrotate configured."
 
 cd $orig_fld
 
@@ -266,11 +280,12 @@ fi
 #================================================
 
 # clean-up
+cecho "Cleaning up..." $C_GREEN
 sudo rm -R $work_fld
 
-echo "----------------------------------------"
+cecho "----------------------------------------" $C_BLUE
 echo "MongoDB $mongo_version has been successfully installed."
 echo "You can start MongoDB by starting /etc/init.d/mongod start"
-echo "----------------------------------------"
+cecho "----------------------------------------" $C_BLUE
 
 
