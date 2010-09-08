@@ -283,9 +283,9 @@ fi
 cecho "Cleaning up..." $C_GREEN
 sudo rm -R $work_fld
 
-cecho "----------------------------------------" $C_BLUE
-echo "MongoDB $mongo_version has been successfully installed."
-echo "You can start MongoDB by starting /etc/init.d/mongod start"
-cecho "----------------------------------------" $C_BLUE
+cecho "----------------------------------------" $C_CYAN
+cecho "MongoDB $mongo_version has been successfully installed." $C_CYAN
+cecho "You can start MongoDB by starting /etc/init.d/mongod start" $C_CYAN
+cecho "----------------------------------------" $C_CYAN
 
 
