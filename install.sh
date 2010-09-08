@@ -131,6 +131,7 @@ cd $work_fld
 [ -e $mongo_tar ] && sudo rm $mongo_tar > /dev/null
 
 # download archive
+cecho "Downloading MonoDB archive..." $C_GREEN
 sudo wget $mongo_download
 if [ $? -ne 0 ]; then
   cecho "Fatal error: can not download $mongo_download." $C_RED
@@ -138,10 +139,13 @@ if [ $? -ne 0 ]; then
 fi
 
 # extract original source archive to predefined folder
-sudo tar xvzf $mongo_tar -C $install_fld
+cecho "Extracting downloaded MongoDB archive to $install_fld." $C_RED
+sudo tar xzf $mongo_tar -C $install_fld
 if [ $? -ne 0 ]; then
   cecho "Fatal error: can not extract archive $mongo_tar to folder $install_fld." $C_RED
   exit $ERR_PREPARE
+else
+  echo "Done."
 fi
 
 if [ ! -d $install_fld/${mongo_tar%.*} ]; then
