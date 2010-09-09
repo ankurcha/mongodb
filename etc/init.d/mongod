@@ -59,7 +59,7 @@ function d_start {
     --make-pidfile --pidfile /var/run/$NAME.pid \
   	--chuid $USER \
   	--exec $DAEMON -- $DAEMON_OPTS || true
-  echo "$NAME."
+  echo "$NAME $DAEMON_OPTS"
 
 }
 
