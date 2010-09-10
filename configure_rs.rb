@@ -82,28 +82,91 @@ def show_help
 end
 
 #****************************************
+class String
+
+  def to_a
+    # Conversion of a string to an array.
+    # It is assumes that string is formatted as follows: 'key1:value1,key2,key3:value...'
+
+    _a = []
+    _s = self.dup
+	
+    _s.split(',').each{|ss| _a << ss.split(':')}
+    
+    _a
+
+  end
+  
+end
+
+#****************************************
+
+class Mongo::Connection
+
+  # Add new replica set member to existing replica set
+  def add_rs_member(new_member)
+    raise 'Expecting String as parameter.' if not new_member.kind_of? String
+
+    # Read replica set configuration
+    _cfg = self['local']['system.replset'].find_one
+    raise 'Replica set configuration does not exist.' if _cfg.nil?
+
+    _cfg['version'] += 1
+
+    # Find highest _id
+    _next_id = 0
+    _cfg['members'].each {|h| _next_id = h['_id'] + 1 if _next_id <= h['_id']}
+
+    # Add new member to configuration
+    _cfg['members'] << {"_id" => _next_id, "host" => new_member}
+    logger.debug("Adding replica set member: _id = #{_next_id}, host = #{new_member}") if not logger.nil?
+
+    self['admin'].command({ :replSetReconfig => _cfg})
+
+  end
+
+end
+  
+#****************************************
+  
+def rs_member_add(rs_seed, new_rs_member)
+
+  return 0 if rs_seed.nil?
+  
+  begin
+    _conn = Connection.multi(rs_seed.to_a)
+  rescue Exception => e
+    STDOUT.puts(e.message)
+  end
+  _result = _conn.add_rs_member(new_rs_member)
+
+  # result key 'ok' is 1 if everything went fine, and 0 if not
+  _result['ok'] 
+
+end
+
+#****************************************
 
 begin
   VER = '1.0.0'
 
   # create hash containing commandline options, if there are any  
 
-  begin
-    if ARGV.flags.help?
-      show_help
-      exit ERR_START
-    end
+  if ARGV.flags.help?
+    show_help
+    exit ERR_START
+  end
 
-    _log = Logger.new(STDERR)
+  _log = Logger.new(STDERR)
 
-    _log.level = case _cfg.verbose
+  _log.level = case _cfg.verbose
       when '1' then Logger::FATAL
       when '2' then Logger::ERROR
       when '3' then Logger::WARNING
       when '4' then Logger::INFO
       when '5' then Logger::DEBUG
       else Logger::INFO
-    end
+  end
 
     # check configuration
     if _cfg.access_id.nil? || _cfg.address.nil? || _cfg.access_secret.nil?
@@ -132,12 +195,6 @@ begin
 	#---------------------------------
 	
     _log.info("******** reg2rep #{VER} started")
-    _log.info("repository: #{_cfg.address}")
-    _log.info("access id: #{_cfg.access_id}")
-    _log.info("secret key: " + _cfg.access_secret.to_secret)
-    _log.info("verbose: #{_cfg.verbose}")
-
-    _repo = R2Repo.new(_cfg, _log)
 
     # command 'add' specified?
     if ARGV.flags.add?
@@ -145,17 +202,24 @@ begin
 	  STDOUT.puts("Item #{ARGV.flags.add[1]} added to domain #{ARGV.flags.add[0]}")	if _cfg.verbose == 5
     end
 
-	  connection   = Mongo::Connection.new("localhost",27017,:slave_ok =>true)
-
-  puts "#{connection}"
-
-  connection.database_names.each { |name| puts name }
-  connection.database_info.each { |info| puts info.inspect}
-
-  db=connection.db("admin")
-  puts "#{db}"
-
+	connection = Mongo::Connection.new("localhost",27017,:slave_ok =>true, :logger=>_log)
+  db = connection.db("admin")
   result=db.command({:replSetGetStatus=>1})
+  if not result['set'].nil? # replica set is configured and running
+  elsif result['startupStatus'].nil? # not running in replica set mode
+    STDOUT.puts("Error: This database is not configured to run as replica set node.\nUse mongod --replSet <set> to start it as replica set node.")
+    exit ERR_NOT_RS_NODE
+  elsif result['startupStatus'] == 1 # loading config - replSet specified, seed specified, primary reachable, trying to load config from primary
+    STDOUT.puts("Adding this node as replica-set node.")
+  elsif result['startupStatus'] == 4 # loading config - replSet specified, seed specified, primary not-reachable, trying to load config from primary
+    
+  elsif result['startupStatus'] == 3 # no config - replSet specified, no seed specified
+  elsif result['startupStatus'] == 6 # coming online - replSet specified, initialized, primary
+  
+    
+  
+  if result['ok'] == 0 # replica set is not configured at all
+  
 
   puts "#{result}"
 

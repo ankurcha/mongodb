@@ -12,22 +12,22 @@
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
-# full name of daemon
+# Full name of daemon
 DAEMON=/usr/local/bin/mongod
 
-# daemon command line options
+# Daemon command line options
 DAEMON_OPTS="-f /etc/mongodb/mongod.conf"
 
-# daemon name. Used also for pid file creation.
+# Daemon name. Used also for pid file creation.
 NAME="mongod"
 
-# daemon description
+# Daemon description
 DESC="MongoDB database server"
 
-# user account used to run mongod daemon
+# User account used to run mongod daemon
 USER="mongodb"
 
-# replica set name (modify in case you would like to run mongod 
+# Replica set name (modify in case you would like to run mongod 
 # configured as replica set node - see http://www.mongodb.org/display/DOCS/Replica+Sets)
 RS_NAME=""
 
