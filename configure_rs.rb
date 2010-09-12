@@ -21,14 +21,21 @@ ERR_REPO	= 3
 begin
   require 'rubygems'
 rescue LoadError => e
-  STDERR.puts("Requires the rubygems. Read http://docs.rubygems.org/read/chapter/3#page13 how to install them.")
+  STDERR.puts("Library 'rubygems' not found. Read http://docs.rubygems.org/read/chapter/3#page13 how to install it.")
+  exit ERR_START
+end
+
+begin
+  require 'logger'
+rescue LoadError => e
+  STDERR.puts("Library 'logger' not found.")
   exit ERR_START
 end
 
 begin
   require 'mongo'
 rescue LoadError => e
-  STDERR.puts("Requires the mongo. Run \'gem install mongo\' and try again.")
+  STDERR.puts("Library 'mongo' not found. Run \'gem install mongo\' and try again.")
   exit ERR_START
 end
 
@@ -36,7 +43,7 @@ end
 begin
   require 'optiflag'
 rescue LoadError => e
-  STDERR.puts("Requires the optiflag.  Run \'gem install optiflag\' and try again.")
+  STDERR.puts("Library 'optiflag' not found.  Run \'gem install optiflag\' and try again.")
   exit ERR_START
 end
 
@@ -47,9 +54,13 @@ include Mongo
 
 module AnalyzeCmd extend OptiFlagSet
 
-  flag "seed" do
+  optional_flag "db" do
+    description "Database to initialize."
+  end
+  
+  optional_flag "seed" do
     alternate_forms "s"
-    description "Add an item with specified attributes to a domain."
+    description "Seed to be used for replica-set initialization."
   end 
 
   optional_flag "verbose" do
@@ -124,7 +135,7 @@ class Mongo::Connection
     self['admin'].command({ :replSetReconfig => _cfg})
 
   end
-
+  
 end
   
 #****************************************
@@ -150,81 +161,97 @@ end
 begin
   VER = '1.0.0'
 
-  # create hash containing commandline options, if there are any  
-
   if ARGV.flags.help?
     show_help
     exit ERR_START
   end
+  
+  #---------------------------------
 
   _log = Logger.new(STDERR)
 
-  _log.level = case _cfg.verbose
-      when '1' then Logger::FATAL
-      when '2' then Logger::ERROR
-      when '3' then Logger::WARNING
-      when '4' then Logger::INFO
-      when '5' then Logger::DEBUG
-      else Logger::INFO
+  _log.level = case ARGV.flags.verbose
+    when '1' then Logger::FATAL
+    when '2' then Logger::ERROR
+    when '3' then Logger::WARNING
+    when '4' then Logger::INFO
+    when '5' then Logger::DEBUG
+    else Logger::INFO
   end
 
-    # check configuration
-    if _cfg.access_id.nil? || _cfg.address.nil? || _cfg.access_secret.nil?
-      STDERR.puts "Error: Repository address and/or credentials are missing."
-      exit ERR_PARAMS
-    end
- 
-    # command 'add' specified?
-    if ARGV.flags.add?
-      # we expect domain, item and attributes to be specified
-      if (not ARGV.flags.add.kind_of? Array) || ARGV.flags.add.length < 3
-        STDERR.puts "Error: Arguments missing for command '--add'"
-        exit ERR_PARAMS
-      end
-    end
-
-    if not _cfg.log_file.nil?
-      begin
-        _log = Logger.new(_cfg.log_file)
-      rescue
-        STDERR.puts "Error: Not possible to create/open log file #{_cfg.log_file}"
-        exit ERR_PARAMS
-      end
-    end
-	
-	#---------------------------------
-	
-    _log.info("******** reg2rep #{VER} started")
-
-    # command 'add' specified?
-    if ARGV.flags.add?
-      _result = _repo.add(ARGV.flags.add[0], ARGV.flags.add[1], ARGV.flags.add[2].to_h)
-	  STDOUT.puts("Item #{ARGV.flags.add[1]} added to domain #{ARGV.flags.add[0]}")	if _cfg.verbose == 5
-    end
-
-	connection = Mongo::Connection.new("localhost",27017,:slave_ok =>true, :logger=>_log)
-  db = connection.db("admin")
-  result=db.command({:replSetGetStatus=>1})
-  if not result['set'].nil? # replica set is configured and running
-  elsif result['startupStatus'].nil? # not running in replica set mode
-    STDOUT.puts("Error: This database is not configured to run as replica set node.\nUse mongod --replSet <set> to start it as replica set node.")
-    exit ERR_NOT_RS_NODE
-  elsif result['startupStatus'] == 1 # loading config - replSet specified, seed specified, primary reachable, trying to load config from primary
-    STDOUT.puts("Adding this node as replica-set node.")
-  elsif result['startupStatus'] == 4 # loading config - replSet specified, seed specified, primary not-reachable, trying to load config from primary
-    
-  elsif result['startupStatus'] == 3 # no config - replSet specified, no seed specified
-  elsif result['startupStatus'] == 6 # coming online - replSet specified, initialized, primary
+  #---------------------------------
   
-    
-  
-  if result['ok'] == 0 # replica set is not configured at all
-  
-
-  puts "#{result}"
-
-    _log.close
-	
+  if not ARGV.flags.db?
+    _log.error("Database to be initialized not specified.")
+	exit ERR_START
   end
+
+  #---------------------------------
+  
+  _log.info("Configuring database #{ARGV.flags.db} as replica-set node.")
+  _log.info("Using seed: #{ARGV.flags.seed}") if ARGV.flags.seed?
+
+  _host = ARGV.flags.db.split(":")[0]  # take the host from host:port
+  _port = ARGV.flags.db.split(":")[1]  # take port from host:port
+  
+  _conn = Mongo::Connection.new(_host,_port,:slave_ok =>true, :logger=>_log)
+  
+  begin # rescue
+    i = 0
+    
+    begin # while
+      i += 1
+      sleep 5 if i > 1
+    
+      # initialization should be performed using 'admin' database
+      result=_conn.db('admin').command({:replSetGetStatus=>1}, :check_response=>false)
+	  raise 'Not possible to get replica-set status.' if result.nil?
+    
+      if not result['set'].nil? # replica set is configured and running
+        _log.info("Replica set node is configured.")
+    
+      # not running in replica set mode
+      elsif result['startupStatus'].nil?
+        raise "E001: This database is not configured to run as replica set node.\nUse mongod --replSet <set> to start it as replica set node."
+    
+      # loading config - replSet specified, seed specified, primary reachable, trying to load config from primary
+      elsif result['startupStatus'] == 1 
+        _log.info("Adding this node as secondary replica-set node.")
+        rs_member_add(ARGV.flags.seed, ARGV.flags.db)
+    
+      # loading config - replSet specified, seed specified, primary not-reachable, trying to load config from primary
+      elsif result['startupStatus'] == 4 
+        _log.debug("Attempt #{i}. No host from specified seed hosts is reachable.")
+      
+      # no config - replSet specified, no seed specified - assuming this is the first node
+      elsif result['startupStatus'] == 3 
+        _log.info("Initializing this node as primary replica-set node.")
+        _conn.db('admin').command({:replSetInitiate=>:nil})
+      
+      # coming online - replSet specified, initialized, primary  
+      elsif result['startupStatus'] == 6 
+        _log.debug("Attempt #{i}. Replica set initialized - coming online.")
+	  end 
+    
+    end while result['set'].nil? and i < 5
+    
+  rescue Exception => e
+    _log.error(e.message)
+    _log.error("Replica set node initiliazation failed.")
+
+  end 
+  
+  # close connection to database being configured
+  _conn.close
+
+  # close logger
+  _log.close
+  
+  if result['set'].nil?
+    exit 1
+  end
+
+  exit 0
+  
 end
 
