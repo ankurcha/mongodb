@@ -24,6 +24,12 @@ mongo_download="http://downloads.mongodb.org/linux/"
 
 ##### OTHER VARIABLES - TO BE KEPT AS THEY ARE
 
+# name of this package
+vd_pkg="mongodb-vd-$mongo_version"
+
+# path, where this package will be installed
+vd_pkg_path="/usr/local/lib"
+
 ERR_START=1
 ERR_PREPARE=2
 ERR_INSTALL=3
@@ -163,8 +169,15 @@ fi
 
 ############################### Files should be already there ###############
 
+cecho "Creating install folder '"$vd_pkg_path/$vd_pkg"'" $C_GREEN
+
+# Create package install folder
+[ -d $vd_pkg_path/$vd_pkg ] || sudo mkdir -p $vd_pkg_path/$vd_pkg
+
 # Create uninstall folder
-[ -d $install_fld/.uninstall ] || sudo mkdir $install_fld/.uninstall
+[ -d $vd_pkg_path/$vd_pkg/.uninstall ] || sudo mkdir $vd_pkg_path/$vd_pkg/.uninstall
+
+# ---------------------------------
 
 # Create system user for MongoDB
 username="mongodb"
@@ -183,17 +196,19 @@ then
     echo "User '"$username"' created."
 	
 	# and make note that user has been created
-	sudo touch $install_fld/.uninstall/user_created
+	sudo touch $vd_pkg_path/$vd_pkg/.uninstall/user_created
   fi
 else
   echo "User '"$username"' already does exist."
 fi 
 
+# ---------------------------------
+
 cecho "Creating symlinks in $bin_folder..." $C_GREEN
 # move existing files/symlinks to .uninstall folder
-[ -d $install_fld/.uninstall/bin ] || sudo mkdir $install_fld/.uninstall/bin
+[ -d $vd_pkg_path/$vd_pkg/.uninstall/bin ] || sudo mkdir $vd_pkg_path/$vd_pkg/.uninstall/bin
 for f in $install_fld/bin/*; do
-  [ -e $bin_folder/${f##/*/} ] && sudo mv $bin_folder/${f##/*/} $install_fld/.uninstall/bin
+  [ -e $bin_folder/${f##/*/} ] && sudo mv $bin_folder/${f##/*/} $vd_pkg_path/$vd_pkg/.uninstall/bin
 done
 
 # create new symlinks pointing to new folder
@@ -202,6 +217,8 @@ if [ $? -ne 0 ]; then
   cecho "Fatal Error: Creation of symlinks failed." $C_RED
   exit $ERR_INSTALL
 fi
+
+# ---------------------------------
 
 # create folder for database files
 cecho "Creating database folder '"$mongo_dbpath"'" $C_GREEN
@@ -213,6 +230,8 @@ fi
 
 # change owner for database folder so mongodb daemons can access it
 sudo chown $username:$username $mongo_dbpath
+
+# ---------------------------------
 
 # create folder for log files
 cecho "Creating log folder." $C_GREEN
@@ -227,10 +246,12 @@ echo "Folder /var/log/mongodb created."
 # and change log folder owner so mongodb daemons can access it
 sudo chown $username:$username /var/log/mongodb
 
+# ---------------------------------
+
 cecho "Creating init.d script for MongoDB database server..." $C_GREEN
 # move existing init.d script to unistall folder
-[ -d $install_fld/.uninstall/initd ] || sudo mkdir $install_fld/.uninstall/initd
-[ -e /etc/init.d/mongod ] && sudo mv /etc/init.d/mongod $install_fld/.uninstall/initd
+[ -d $vd_pkg_path/$vd_pkg/.uninstall/initd ] || sudo mkdir $vd_pkg_path/$vd_pkg/.uninstall/initd
+[ -e /etc/init.d/mongod ] && sudo mv /etc/init.d/mongod $vd_pkg_path/$vd_pkg/.uninstall/initd
 
 # create new init.d script
 sudo cp $orig_fld/etc/init.d/mongod /etc/init.d/mongod
@@ -243,6 +264,8 @@ fi
 sudo chmod +x /etc/init.d/mongod
 
 echo "File /etc/init.d/mongod created"
+
+# ---------------------------------
 
 # add configuration file
 cecho "Copying default configuration files (keeping existing ones)..." $C_GREEN
@@ -257,6 +280,38 @@ done
 
 echo "Copied."
 
+# ---------------------------------
+
+# copy scripts/binaries
+cecho "Copying binaries/scripts $vd_pkg_path/$vd_pkg/bin" $C_GREEN
+[ -d $vd_pkg_path/$vd_pkg/bin ] || sudo mkdir -p $vd_pkg_path/$vd_pkg/bin
+sudo cp -r $orig_fld/bin/* $vd_pkg_path/$vd_pkg/bin
+if [ $? -ne 0 ]; then
+  cecho "Error: Copying of failed." $C_RED
+  exit $ERR_INSTALL
+fi
+
+echo "Copied."
+
+# make sure all binaries are executable
+sudo chmod -R +x $vd_pkg_path/$vd_pkg/bin/*
+
+# set installation path where needed
+cecho "Updating helper scripts to point to install location.." $C_GREEN
+
+_f= "$vd_pkg_path/$vd_pkg/bin/mongodb-configure-rs.sh"
+echo "  $_f"
+sudo sed -i -e "/^_install_path/c_install_path=$vd_pkg_path/$vd_pkg/bin" $_f
+if [ $? -ne 0 ]; then
+  cecho "Error: Unable to modify necessary file." $C_RED
+  exit $ERR_INSTALL
+fi
+
+# create link to /usr/local/bin (no extension)
+sudo cp -s $_f /usr/local/bin/${_f%.*}
+
+# ---------------------------------
+
 # configure log-rotate
 cecho "Configuring logrotate..." $C_GREEN
 [ -e /etc/logrotate.d/mongodb ] || sudo cp $orig_fld/etc/logrotate.d/mongodb /etc/logrotate.d
@@ -267,7 +322,7 @@ fi
 
 echo "Logrotate configured."
 
-cd $orig_fld
+# ---------------------------------
 
 # make MongoDB to start at server boot
 cecho "Creating startup scripts..." $C_GREEN
@@ -278,6 +333,8 @@ if [ $? -ne 0 ]; then
 fi
 
 #================================================
+
+cd $orig_fld
 
 # clean-up
 cecho "Cleaning up..." $C_GREEN
