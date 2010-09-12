@@ -299,7 +299,7 @@ sudo chmod -R +x $vd_pkg_path/$vd_pkg/bin/*
 # set installation path where needed
 cecho "Updating helper scripts to point to install location.." $C_GREEN
 
-_f= "$vd_pkg_path/$vd_pkg/bin/mongodb-configure-rs.sh"
+_f="$vd_pkg_path/$vd_pkg/bin/mongodb-configure-rs.sh"
 echo "  $_f"
 sudo sed -i -e "/^_install_path/c_install_path=$vd_pkg_path/$vd_pkg/bin" $_f
 if [ $? -ne 0 ]; then
@@ -307,8 +307,8 @@ if [ $? -ne 0 ]; then
   exit $ERR_INSTALL
 fi
 
-# create link to /usr/local/bin (no extension)
-sudo cp -v -s $_f /usr/local/bin/${_f%.*}
+# create link to /usr/local/bin 
+sudo cp -s $_f /usr/local/bin/${_f##/*/}
 
 # ---------------------------------
 
