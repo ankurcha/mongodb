@@ -66,7 +66,7 @@ function d_start {
   echo "Starting $DESC: "
   
   # if replica set name is defined
-  if [ $RS_NAME ]; then
+  if [ "$RS_NAME" ]; then
     echo "  - replica set name specified - starting as replica set node"
     if [ ! $RS_SEED ] && [ $RS_SEED_APP ]; then
 	  RS_SEED="`RS_SEED_CMD`"
@@ -90,7 +90,7 @@ function d_start {
   	--chuid $USER \
   	--exec $DAEMON -- $DAEMON_OPTS || true
 	
-  if [ $RS_NAME ] && [ $RS_CONFIGURE_CMD ]; then
+  if [ "$RS_NAME" ] && [ "$RS_CONFIGURE_CMD" ]; then
     # wait for database to start
     sleep 30 s 
 	
