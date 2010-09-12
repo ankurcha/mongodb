@@ -285,7 +285,7 @@ echo "Copied."
 # copy scripts/binaries
 cecho "Copying binaries/scripts $vd_pkg_path/$vd_pkg/bin" $C_GREEN
 [ -d $vd_pkg_path/$vd_pkg/bin ] || sudo mkdir -p $vd_pkg_path/$vd_pkg/bin
-sudo cp -r $orig_fld/bin/* $vd_pkg_path/$vd_pkg/bin
+sudo cp -v -r $orig_fld/bin/* $vd_pkg_path/$vd_pkg/bin
 if [ $? -ne 0 ]; then
   cecho "Error: Copying of failed." $C_RED
   exit $ERR_INSTALL
@@ -308,7 +308,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # create link to /usr/local/bin (no extension)
-sudo cp -s $_f /usr/local/bin/${_f%.*}
+sudo cp -v -s $_f /usr/local/bin/${_f%.*}
 
 # ---------------------------------
 
