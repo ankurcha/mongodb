@@ -92,7 +92,9 @@ function d_start {
 	
   if [ "$RS_NAME" ] && [ "$RS_CONFIGURE_CMD" ]; then
     # wait for database to start
-    sleep 30 s 
+	echo "  - waiting for database to start"
+    
+    sleep 30s 
 	
 	# run config
 	$RS_CONFIGURE_CMD
