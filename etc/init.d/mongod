@@ -31,30 +31,18 @@ USER="mongodb"
 # configured as replica set node - see http://www.mongodb.org/display/DOCS/Replica+Sets)
 RS_NAME=""
 
-# In case mongod is configured as replica-set node, then RS_SEED_CMD
-# can contain commandline for starting application/script returning
-# seed nodes in format host1:port1,host2:port2,host3. (see Reg2Rep project
-# at http://github.com/vanilladesk/reg2rep for example of using
-# remote registry for keeping list of seed nodes in a dynamic environment)
-RS_SEED_CMD=""
-
 # In case mongod is configured as replica-set node, then RS_SEED
 # can contain comma separated seed nodes e.g. RS_SEED="host1:port1,host2:port2,host3"
 # If both RS_SEED_APP and RS_SEED are set, RS_SEED takes preference.
 RS_SEED=""
 
-# If RS_CONFIGURE_CMD is specified it should contain command line of a command/script
-# used to initialize/configure replica set. Such script is provided in this
-# package bin folder: mongodb-configure-rs.sh 
-RS_CONFIGURE_CMD=""
-
-# (optional) Application used to register node in central repository.
-NODE_REGISTER_CMD=""
-
-# (optional) Application used to unregister node from central repository.
-NODE_UNREGISTER_CMD=""
-
 #------------------------------------------------
+
+# if RS_SEED is defined and RS_NAME too, then append RS_SEED to RS_NAME
+[ "$RS_SEED" ] && RS_NAME="$RS_NAME/$RS_SEED"
+
+# if RS_NAME is defined, then include it in daemon command line options
+DAEMON_OPTS="--replSet $RS_NAME $DAEMON_OPTS"
 
 [ -e $DAEMON ] || exit 0
 
@@ -63,56 +51,20 @@ set -e
 . /lib/lsb/init-functions
 
 function d_start {
-  echo "Starting $DESC: "
-  
-  # if replica set name is defined
-  if [ "$RS_NAME" ]; then
-    echo "  - replica set name specified - starting as replica set node"
-    if [ ! $RS_SEED ] && [ $RS_SEED_APP ]; then
-	  RS_SEED="`RS_SEED_CMD`"
-	fi
-	
-	# if RS_SEED is defined and RS_NAME too, then append RS_SEED to RS_NAME
-    [ "$RS_SEED" ] && RS_NAME="$RS_NAME/$RS_SEED"
-
-    # if RS_NAME is defined, then include it in daemon command line options
-    DAEMON_OPTS="--replSet $RS_NAME $DAEMON_OPTS"
-  fi 
-  
-  # if registration command is defined, then register
-  if [ "$NODE_REGISTER_CMD" ]; then
-    echo "  - registering - $NODE_REGISTER_CMD"
-    $NODE_REGISTER_CMD
-  fi
-  
+  echo -n "Starting $DESC: "
+ 
   start-stop-daemon --start --background --quiet \
     --make-pidfile --pidfile /var/run/$NAME.pid \
   	--chuid $USER \
   	--exec $DAEMON -- $DAEMON_OPTS || true
-	
-  if [ "$RS_NAME" ] && [ "$RS_CONFIGURE_CMD" ]; then
-    # wait for database to start
-	echo "  - waiting for database to start"
-    
-    sleep 30s 
-	
-	# run config
-	$RS_CONFIGURE_CMD
-  fi
-	
+
   echo "  $NAME $DAEMON_OPTS"
 
 }
 
 function d_stop {
-  echo "Stopping $DESC: "
+  echo -n "Stopping $DESC: "
   
-  # if unregistration command is defined, then unregister
-  if [ "$NODE_UNREGISTER_CMD" ]; then
-    echo "  - unregistering - $NODE_UNREGISTER_CMD"
-    $NODE_UNREGISTER_CMD
-  fi
-
   start-stop-daemon --stop --quiet --pidfile /var/run/$NAME.pid \
   	--exec $DAEMON || true
   echo " $NAME has been stopped."
