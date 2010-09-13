@@ -137,16 +137,19 @@ class Mongo::Connection
 
   end
   
+  def initiate_rs(rs_name,rs_seed)
+    self.command({:replSetInitiate=>:nil})
+  end
 end
   
 #****************************************
   
-def rs_member_add(rs_seed, new_rs_member)
+def rs_member_add(rs_seed, new_rs_member, _log)
 
   return 0 if rs_seed.nil?
   
   begin
-    _conn = Connection.multi(rs_seed.to_a)
+    _conn = Mongo::Connection.multi(rs_seed.to_a, :logger=>_log)
   rescue Exception => e
     STDOUT.puts(e.message)
   end
@@ -216,9 +219,9 @@ begin
         raise "E001: This database is not configured to run as replica set node.\nUse mongod --replSet <set> to start it as replica set node."
     
       # loading config - replSet specified, seed specified, primary reachable, trying to load config from primary
-      elsif result['startupStatus'] == 1 
+      elsif result['startupStatus'] == 1 or (result['startupStatus'] == 3 and ARGV.flags.seed?)
         _log.info("Adding this node as secondary replica-set node.")
-        rs_member_add(ARGV.flags.seed, ARGV.flags.db)
+        rs_member_add(ARGV.flags.seed, ARGV.flags.db, _log)
     
       # loading config - replSet specified, seed specified, primary not-reachable, trying to load config from primary
       elsif result['startupStatus'] == 4 
@@ -227,7 +230,7 @@ begin
       # no config - replSet specified, no seed specified - assuming this is the first node
       elsif result['startupStatus'] == 3 
         _log.info("Initializing this node as primary replica-set node.")
-        _conn.db('admin').command({:replSetInitiate=>:nil})
+        _conn.db('admin').initiate_rs()
       
       # coming online - replSet specified, initialized, primary  
       elsif result['startupStatus'] == 6 
