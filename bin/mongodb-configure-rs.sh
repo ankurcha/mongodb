@@ -7,4 +7,4 @@ fi
 
 _install_path=/opt/vdsd-db
 
-ruby $_install_path/configure_rs.rb $@
+ruby $_install_path/mongodb-configure-rs.rb $@
