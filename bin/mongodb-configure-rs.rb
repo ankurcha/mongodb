@@ -4,9 +4,8 @@
 # This script makes MongoDB replica-set configuration easier.
 # 
 # This script depends on following gems:
-# - right_aws
-# - right_http_connection
 # - optiflag
+# - mongo
 #
 # Copyright (c) 2010 Vanilladesk Ltd. http://www.vanilladesk.com
 #
@@ -38,7 +37,6 @@ rescue LoadError => e
   STDERR.puts("Library 'mongo' not found. Run \'gem install mongo\' and try again.")
   exit ERR_START
 end
-
 
 begin
   require 'optiflag'
@@ -77,13 +75,16 @@ end
 
 #**************************************
 def show_help
-  puts "configure_rs v"+VER+" - Configure replica-set - (c) 2010 Vanilladesk Ltd."
+  puts "mongodb-configure-rs v"+VER+" - Configure replica-set - (c) 2010 Vanilladesk Ltd."
   puts ""
-  puts "Usage: configure_rs --seed <seed-data>" 
+  puts "Usage: mongodb-configure-rs.sh --db <host:port> [options]" 
   puts ""
-  puts "Commands:"
-  puts " --logfile        - Logfile. Default is STDERR."
-  puts " --verbose        - Verbose level. Default is 4."
+  puts "Options:"
+  puts " --seed <list>      - Comma separated list of existing replica set members"
+  puts "                      to become 'seed' for this node. Assuming node is primary"
+  puts "                      if no seed specified."
+  puts "                      Example: host1:port1,host2,host3,host4:port4"
+  puts " --verbose <level>  - Verbose level. Default is 4."
   puts "                    1 - fatal errors"
   puts "                    2 - errors"
   puts "                    3 - warnings"

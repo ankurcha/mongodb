@@ -167,6 +167,18 @@ if [ ! -e "$install_fld/bin/mongod" ]; then
   exit $ERR_PREPARE
 fi
 
+# install Ruby gems necessary for running helper scripts
+
+if [ "`which ruby`" ] && [ "`which gem`" ]; then
+  cecho "Ruby installed - installing gems necessary to run provided helper scripts." $C_GREEN
+  sudo gem install mongo bson_ext optiflag
+  if [ $? -ne 0 ]; then
+    cecho "Warning: Some of required gems failed to install. Please, install manually." $C_RED
+  fi
+else
+  cecho "Warning: Ruby or Ruby Gems not installed. Please, install manually." $C_RED
+fi
+
 ############################### Files should be already there ###############
 
 cecho "Creating install folder '"$vd_pkg_path/$vd_pkg"'" $C_GREEN
