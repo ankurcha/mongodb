@@ -42,7 +42,7 @@ RS_SEED=""
 [ "$RS_SEED" ] && RS_NAME="$RS_NAME/$RS_SEED"
 
 # if RS_NAME is defined, then include it in daemon command line options
-DAEMON_OPTS="--replSet $RS_NAME $DAEMON_OPTS"
+[ "$RS_NAME" ] && DAEMON_OPTS="--replSet $RS_NAME $DAEMON_OPTS"
 
 [ -e $DAEMON ] || exit 0
 
