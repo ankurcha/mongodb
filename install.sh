@@ -13,7 +13,7 @@
 
 ##### CONFIGURATION - TO BE MODIFIED IF NECESSARY
 # MongoDB version to be used
-mongo_version="1.6.2"
+mongo_version="1.8.1"
 
 # MongoDB data path
 mongo_dbpath="/var/lib/mongodb"
