@@ -52,7 +52,7 @@ set -e
 
 function d_start {
   echo -n "Starting $DESC: "
- 
+  ulimit -n 65536
   start-stop-daemon --start --background --quiet \
     --make-pidfile --pidfile /var/run/$NAME.pid \
   	--chuid $USER \
