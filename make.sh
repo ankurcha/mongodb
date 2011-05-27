@@ -4,7 +4,7 @@
 # ------------------------------------------------
 
 app_name="mongodb"
-app_version="1.6.2"
+app_version="1.8.1"
 package_name="vd-install-$app_name-$app_version"
 
 build_folder=~/build
