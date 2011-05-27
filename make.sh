@@ -18,18 +18,13 @@ start_folder="$PWD"
 mkdir -p $temp_folder/$package_name
 cp -R * $temp_folder/$package_name
 
-# remove not needed files so they will not appear in the package
-pushd $temp_folder/$package_name > /dev/nul
-
-rm make.sh
-
-popd > /dev/nul
+rm $temp_folder/$package_name/make.sh
+cd $temp_folder/$package_name
 
 # create final package
 
-pushd $temp_folder > /dev/nul
-tar czf $build_folder/$package_name.tar.gz * --exclude=.git*
-popd > /dev/nul
+tar czf $build_folder/$package_name.tar.gz * 
+cd ../..
 
 rm -R $temp_folder
 
